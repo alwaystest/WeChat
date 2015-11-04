@@ -20,7 +20,7 @@ public class Msg implements Serializable {
     private String to;
     private String[] onlineList;
 
-    private Msg(int msgType,String fromLoginLogout,String to,String[] onlineList,String msg){
+    private Msg(int msgType, String fromLoginLogout, String to, String[] onlineList, String msg) {
         this.msgType = msgType;
         this.fromLoginLogout = fromLoginLogout;
         this.to = to;
@@ -37,7 +37,7 @@ public class Msg implements Serializable {
     }
 
     public static Msg createMsgPacket(String from, String to, String msg) {
-        return new Msg(SEND_MESSAGE, from, to, null, null);
+        return new Msg(SEND_MESSAGE, from, to, null, msg);
     }
 
     public static Msg createOnlineListPacket(String[] onlineList) {

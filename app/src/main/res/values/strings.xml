@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">WeChat</string>
     <string name="send">Send</string>
+    <string name="Login">Login</string>
 </resources>

@@ -44,6 +44,10 @@ public class Msg implements Serializable {
         return new Msg(ONLINE_USERLIST, null, null, onlineList, null);
     }
 
+    public static Msg createSetUserNamePacket(String userName) {
+        return new Msg(USER_RENAME, userName, null, null, null);
+    }
+
     public int getMsgType() {
         return msgType;
     }

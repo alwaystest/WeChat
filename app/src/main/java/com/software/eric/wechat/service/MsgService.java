@@ -4,9 +4,12 @@ import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
+import android.widget.Toast;
 
 import com.software.eric.wechat.db.WeChatDB;
 import com.software.eric.wechat.model.Msg;
@@ -15,29 +18,38 @@ import com.software.eric.wechat.util.LogUtil;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OptionalDataException;
-import java.io.StreamCorruptedException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 public class MsgService extends Service {
 
-    String serverAddress;
-    int serverPort;
+    public static final int TIME_OUT = 1;
 
-    Socket socket;
-    ObjectInputStream objectInputStream;
-    ObjectOutputStream objectOutputStream;
-    WeChatDB weChatDB;
-    LocalBroadcastManager localBroadcastManager;
-    Binder binder = new MsgBinder();
+    private String serverAddress;
+    private int serverPort;
+
+    private Socket socket;
+    private ObjectInputStream objectInputStream;
+    private ObjectOutputStream objectOutputStream;
+    private WeChatDB weChatDB;
+    private LocalBroadcastManager localBroadcastManager;
+    private Binder binder = new MsgBinder();
+    private Handler handler = new Handler(){
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case TIME_OUT:
+                    Toast.makeText(MsgService.this, "Time Out", Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    };
 
     @Override
     public void onCreate() {
         super.onCreate();
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        serverAddress = preferences.getString("server_address", "192.168.1.100");
+        serverAddress = preferences.getString("server_address", "192.168.1.113");
+//        serverAddress = preferences.getString("server_address", "10.25.81.97");
         serverPort = preferences.getInt("server_port", 6666);
         weChatDB = WeChatDB.getInstance(this);
         localBroadcastManager = LocalBroadcastManager.getInstance(this);
@@ -85,6 +97,10 @@ public class MsgService extends Service {
                             LogUtil.e("ClassNotFoundException", e.getMessage());
                         } catch (IOException e) {
                             LogUtil.e("IOException", e.toString());
+                            Message message = new Message();
+                            message.what = TIME_OUT;
+                            handler.sendMessage(message);
+//                            Toast.makeText(MsgService.this, "网络超时", Toast.LENGTH_SHORT);
                         }
 
                     }
@@ -110,19 +126,21 @@ public class MsgService extends Service {
             }
         }
 
-        public void send(Msg msg) {
+        public boolean send(Msg msg) {
+            boolean flag = false;
             try {
                 if (msg != null && objectOutputStream != null) {
                     LogUtil.d("sendMsg",msg.getMsg());
                     objectOutputStream.writeObject(msg);
                     objectOutputStream.flush();
+                    flag = true;
                 } else {
-                    //TODO: make UI know message send failed .to confirm
-                    throw new IOException();
+                    connectServer();
                 }
             } catch (IOException e) {
-                LogUtil.e("IOException", e.getMessage());
+                LogUtil.e("IOException", e.toString());
             }
+            return flag;
         }
     }
 }

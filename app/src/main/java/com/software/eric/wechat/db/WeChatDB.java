@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import com.software.eric.wechat.model.Msg;
 import com.software.eric.wechat.model.MsgContent;
@@ -13,7 +14,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -37,7 +37,7 @@ public class WeChatDB {
         return weChatDB;
     }
 
-    public void saveMsg(Msg msg) {
+    public synchronized void saveMsg(Msg msg) {
         if (msg != null && msg.getMsgType() == Msg.SEND_MESSAGE) {
             ContentValues contentValues = new ContentValues();
             contentValues.put("from_id", msg.getFromLoginLogout());
@@ -62,6 +62,9 @@ public class WeChatDB {
                     LogUtil.e("ParseException", e.getMessage());
                 }
             }
+        }
+        if (cursor != null) {
+            cursor.close();
         }
         return list;
     }

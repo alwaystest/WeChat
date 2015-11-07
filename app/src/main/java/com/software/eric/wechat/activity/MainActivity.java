@@ -53,9 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            if (msgBinder != null) {
-                msgBinder.close();
-            }
+            //only be called at service stop accident
         }
     };
 
@@ -73,7 +71,6 @@ public class MainActivity extends AppCompatActivity {
         msgListView = (ListView) findViewById(R.id.msg_list_view);
         inputText = (EditText) findViewById(R.id.input_text);
         msgListView.setAdapter(adapter);
-        initMsgContents();
         sendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -102,12 +99,26 @@ public class MainActivity extends AppCompatActivity {
                     return false;
             }
         });
-        intentFilter = new IntentFilter();
-        intentFilter.addAction("com.software.eric.wechat.NEW_MESSAGE");
-        localReceiver = new LocalReceiver();
-        localBroadcastManager = LocalBroadcastManager.getInstance(this);
+
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(intentFilter == null) {
+            intentFilter = new IntentFilter();
+            intentFilter.addAction("com.software.eric.wechat.NEW_MESSAGE");
+        }
+        if(localReceiver == null) {
+            localReceiver = new LocalReceiver();
+        }
+        if(localBroadcastManager == null) {
+            localBroadcastManager = LocalBroadcastManager.getInstance(this);
+        }
         localBroadcastManager.registerReceiver(localReceiver, intentFilter);
 
+        initMsgContents();
     }
 
     private void saveMsg(final Msg msgPacket) {
@@ -125,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                msgContentList.clear();
                 WeChatDB weChatDB = WeChatDB.getInstance(MainActivity.this);
                 //TODO:change user to nowUser
                 List<MsgContent> list = weChatDB.loadMsg(userName);
@@ -150,9 +162,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
         localBroadcastManager.unregisterReceiver(localReceiver);
+    }
+
+    @Override
+    protected void onDestroy() {
+        LogUtil.d("WeChat", "onDestroy");
+        super.onDestroy();
+        if (msgBinder != null) {
+            LogUtil.d("service", "binder.close()");
+            msgBinder.close();
+        }
         unbindService(serviceConnection);
         //TODO:if need stopService?
     }

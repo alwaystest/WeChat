@@ -38,7 +38,9 @@ public class MsgService extends Service {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case TIME_OUT:
-                    Toast.makeText(MsgService.this, "Time Out", Toast.LENGTH_SHORT).show();
+                    if(socket!=null) {
+                        Toast.makeText(MsgService.this, "Time Out", Toast.LENGTH_SHORT).show();
+                    }
                     break;
             }
         }
@@ -73,7 +75,7 @@ public class MsgService extends Service {
                             socket = new Socket(InetAddress.getByName(serverAddress), serverPort);
                             objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                             objectInputStream = new ObjectInputStream(socket.getInputStream());
-                            while (true) {
+                            while (!socket.isClosed()) {
                                 Msg msg = (Msg) objectInputStream.readObject();
                                 int msgType = msg.getMsgType();
                                 //TODO:save in DB and notify UI
@@ -92,11 +94,10 @@ public class MsgService extends Service {
                                         break;
                                 }
                             }
-                            //TODO:handle lost connection
                         } catch (ClassNotFoundException e) {
                             LogUtil.e("ClassNotFoundException", e.getMessage());
                         } catch (IOException e) {
-                            LogUtil.e("IOException", e.toString());
+                            LogUtil.e("Receive IOException", e.toString());
                             Message message = new Message();
                             message.what = TIME_OUT;
                             handler.sendMessage(message);
@@ -108,6 +109,7 @@ public class MsgService extends Service {
         }
 
         public void close() {
+            LogUtil.d("MsgService", "close ......");
             try {
                 if (objectInputStream != null) {
                     objectInputStream.close();
@@ -122,7 +124,8 @@ public class MsgService extends Service {
                     socket = null;
                 }
             } catch (IOException e) {
-                LogUtil.e("IOException", e.getMessage());
+                e.printStackTrace();
+                LogUtil.e("Close IOException", e.getMessage());
             }
         }
 
@@ -138,7 +141,8 @@ public class MsgService extends Service {
                     connectServer();
                 }
             } catch (IOException e) {
-                LogUtil.e("IOException", e.toString());
+                e.printStackTrace();
+                LogUtil.e("Send IOException", e.toString());
             }
             return flag;
         }

@@ -62,10 +62,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         userName = getIntent().getStringExtra("user_name");
-        LogUtil.d("login",userName);
+        LogUtil.d("login", userName);
+        LogUtil.d("MainClick Thread",Thread.currentThread().getId()+"");
         Intent serviceIntent = new Intent(this, MsgService.class);
         bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
-        //TODO:just for test, remove
         adapter = new MsgAdapter(this, R.layout.msg_item, msgContentList);
         sendButton = (Button) findViewById(R.id.send);
         msgListView = (ListView) findViewById(R.id.msg_list_view);
@@ -74,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
         sendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                LogUtil.d("Click Thread",Thread.currentThread().getId()+"");
                 String msgContent = inputText.getText().toString();
                 if (!"".equals(msgContent)) {
                     MsgContent msgContentToShow = new MsgContent(MsgContent.Type.TYPE_SENT, new Date(), msgContent);
@@ -91,12 +92,14 @@ public class MainActivity extends AppCompatActivity {
         inputText.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
-                    sendButton.callOnClick();
-                    //TODO: 事件调用顺序有点问题，如果回车键不截断，会触发两次发送事件
+                if (event.getAction() == KeyEvent.ACTION_DOWN && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)
                     return true;
-                } else
-                    return false;
+                if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
+                    LogUtil.d("EnterKey Thread",Thread.currentThread().getId()+"");
+                    sendButton.callOnClick();
+                    return true;
+                }
+                return false;
             }
         });
 
@@ -106,14 +109,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if(intentFilter == null) {
+        if (intentFilter == null) {
             intentFilter = new IntentFilter();
             intentFilter.addAction("com.software.eric.wechat.NEW_MESSAGE");
         }
-        if(localReceiver == null) {
+        if (localReceiver == null) {
             localReceiver = new LocalReceiver();
         }
-        if(localBroadcastManager == null) {
+        if (localBroadcastManager == null) {
             localBroadcastManager = LocalBroadcastManager.getInstance(this);
         }
         localBroadcastManager.registerReceiver(localReceiver, intentFilter);
@@ -125,33 +128,25 @@ public class MainActivity extends AppCompatActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                LogUtil.d("saveMsg Thread",Thread.currentThread().getId()+"");
                 WeChatDB weChatDB = WeChatDB.getInstance(MainActivity.this);
                 weChatDB.saveMsg(msgPacket);
             }
         }).start();
     }
 
-    //TODO:just for test, remove
     private void initMsgContents() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                msgContentList.clear();
-                WeChatDB weChatDB = WeChatDB.getInstance(MainActivity.this);
-                //TODO:change user to nowUser
-                List<MsgContent> list = weChatDB.loadMsg(userName);
-                for (MsgContent msgContent : list) {
-                    msgContentList.add(msgContent);
-                }
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        adapter.notifyDataSetChanged();
-                        msgListView.setSelection(msgContentList.size());
-                    }
-                });
-            }
-        }).start();
+        msgContentList.clear();
+        WeChatDB weChatDB = WeChatDB.getInstance(MainActivity.this);
+        List<MsgContent> list = weChatDB.loadMsg(userName);
+        for (MsgContent msgContent : list) {
+            msgContentList.add(msgContent);
+        }
+        adapter.notifyDataSetChanged();
+        msgListView.setSelection(msgContentList.size()-1);
+        LogUtil.d("Size", msgContentList.size()+"");
+        LogUtil.d("Current Selected", msgListView.getSelectedItemPosition() + "");
+
 
 //        MsgContent msgContent1 = new MsgContent(MsgContent.Type.TYPE_RECEIVED, new Date(), "Hello");
 //        msgContentList.add(msgContent1);
@@ -179,8 +174,18 @@ public class MainActivity extends AppCompatActivity {
         //TODO:if need stopService?
     }
 
-    class LocalReceiver extends BroadcastReceiver {
+    private void updateUI() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                adapter.notifyDataSetChanged();
+                msgListView.setSelection(msgContentList.size());
+            }
+        });
+    }
 
+    class LocalReceiver extends BroadcastReceiver {
+        //This method is always called within the main thread of its process, unless you explicitly asked for it to be scheduled on a different thread
         @Override
         public void onReceive(Context context, Intent intent) {
             Msg msg = (Msg) intent.getSerializableExtra("msg");

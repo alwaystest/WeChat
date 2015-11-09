@@ -1,3 +1,15 @@
 ﻿#坑
 
 onServiceDisconnected()方法并不会在unbindService(serviceConnection)时调用，而是在服务意外停止的时候被调用的。
+
+OnKey is fire twice: the first time for key down, and the second time for key up,
+
+> //This is the filter
+if (event.getAction()!=KeyEvent.ACTION_DOWN)
+return true;
+
+**KeyEvent.ACTION_DOWN 默认处理输入事件，如果把这里屏蔽，则无法输入。**
+
+**KeyEvent.ACTION_DOWN **
+
+所以上面的filter要根据情况选择。

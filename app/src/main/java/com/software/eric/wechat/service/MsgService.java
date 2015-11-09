@@ -78,7 +78,6 @@ public class MsgService extends Service {
                             while (!socket.isClosed()) {
                                 Msg msg = (Msg) objectInputStream.readObject();
                                 int msgType = msg.getMsgType();
-                                //TODO:save in DB and notify UI
                                 switch (msgType) {
                                     case Msg.SEND_MESSAGE:
                                         weChatDB.saveMsg(msg);
